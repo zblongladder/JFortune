@@ -5,7 +5,7 @@ import java.util.Scanner;
 import java.io.*;
 import java.util.Vector;
 public class RSA{
-    Key publicKey; //mildly annoying that "public" and "private" are keywords
+    Key publicKey;
     Key privateKey;
     BigInteger p,q,n,totient,e,d;
     static final String KEYFILENAME = "rsakey.dat";
@@ -39,7 +39,6 @@ public class RSA{
 		    totient = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
 		    for(;;){
 			e = (new BigDecimal(totient).multiply(new BigDecimal(Math.random()))).toBigInteger();
-			//print(gcd(e,totient)+"\n");
 			if(gcd(e,totient).equals(BigInteger.ONE))
 			    break;
 		    }
@@ -55,15 +54,8 @@ public class RSA{
 	catch(Exception e){
 	    throw new RuntimeException(e);
 	}
-	//print("p:"+p+"\nq:"+q+"\n");
-	//print("e:"+e+"\nd:"+d+"\nn:"+n+"\n");
 	publicKey = new Key(e,n);
-	privateKey = new Key(d,n);
-	
-	
-    }
-    void print(Object e){
-	System.out.print(e+"");
+	privateKey = new Key(d,n);		
     }
     BigInteger getPrime(){
 	/*note that one can change the method of generating primes
@@ -108,21 +100,13 @@ public class RSA{
 	    blocks[blocks.length-1] = new byte[sbytes.length%(n.bitLength()/8)];
 	int sbytesCounter = 0;
 	for(int i=0; i<blocks.length; i++){
-	    /*
-	    for(int j=0; j<blocks[i].length; j++){
-		blocks[i][j]=sbytes[sbytesCounter++];
-	    }
-	    */
 	    System.arraycopy(sbytes,i*(blocks[0].length),blocks[i],0,blocks[i].length);
 	}    
-	
 	for(byte[] bytes:blocks){
 	    BigInteger e = theirPublicKey.getExponent();
 	    BigInteger n = theirPublicKey.getModulus();
 	    BigInteger ret = new BigInteger(1,bytes);
-	    //print("unencrypted:" +ret+"\n");
 	    BigInteger encrypted = ret.modPow(e,n);
-	    //print("encrypted:"+encrypted+ "\n");
 	    toReturn.add(encrypted+"");
 	}
 	return toReturn;
@@ -132,16 +116,12 @@ public class RSA{
 	int currentPos = 0;
 	String toReturn = "";
 	for(String s:toDecrypt){
-
-	    //print("undecrypted:"+s+"\n");
 	    BigInteger r = new BigInteger(s).modPow(d,n);
-	    //print("decrypted:"+r+"\n");
 	    byte[] rbytes = r.toByteArray();
 	    while(rbytes.length+currentPos>returnbytes.length)
 		returnbytes = byteArrayResize(returnbytes);
 	    System.arraycopy(rbytes,0,returnbytes,currentPos,rbytes.length);
 	    currentPos += rbytes.length;
-	    //toReturn += new String(r.toByteArray());
 	}
 	returnbytes = byteArrayFitToSize(returnbytes,currentPos);
 	return new String(returnbytes);
