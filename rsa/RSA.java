@@ -18,42 +18,57 @@ public class RSA{
     }
     public RSA(){
 	File rsaFile = new File(KEYFILENAME);
+	//try{
+	boolean keyfileIsNew;
 	try{
-	    if(!rsaFile.createNewFile()){//if the file already existed
-		Scanner keyfile = new Scanner(rsaFile);
-		e = new BigInteger(keyfile.nextLine().trim());
-		d = new BigInteger(keyfile.nextLine().trim());
-		n = new BigInteger(keyfile.nextLine().trim());
+	    keyfileIsNew = rsaFile.createNewFile();
+	}
+	catch(IOException e){
+	    throw new RuntimeException("Error creating or accessing file "+KEYFILENAME+":"+e);
+	}
+	if(!keyfileIsNew){//if the file already existed
+	    Scanner keyfile;
+	    try{
+		keyfile = new Scanner(rsaFile);
 	    }
-	    else{//generate a new key for the instance of RSA
-		rsaFile.createNewFile();
-		PrintWriter rsadat = new PrintWriter(rsaFile);
+	    catch(FileNotFoundException e){
+		throw new RuntimeException("Could not find RSA keyfile "+KEYFILENAME+":"+e);
+	    }
+	    e = new BigInteger(keyfile.nextLine().trim());
+	    d = new BigInteger(keyfile.nextLine().trim());
+	    n = new BigInteger(keyfile.nextLine().trim());
+	}
+	else{//generate a new key for the instance of RSA
+	    PrintWriter rsadat;
+	    try{
+		rsadat = new PrintWriter(rsaFile);
+	    }
+	    catch(FileNotFoundException e){
+		throw new RuntimeException("Could not find RSA keyfile "+KEYFILENAME+":"+e);
+	    }
+	    for(;;){
 		for(;;){
-		    for(;;){
-			p = getPrime();
-			q = getPrime();
-			if(!p.equals(q))
-			    break;
-		    }
-		    n = p.multiply(q);
-		    totient = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
-		    for(;;){
-			e = (new BigDecimal(totient).multiply(new BigDecimal(Math.random()))).toBigInteger();
-			if(gcd(e,totient).equals(BigInteger.ONE))
-			    break;
-		    }
-		    d = getPrivateExponent(e,totient);
-		    if(d.compareTo(BigInteger.ONE)>0)
+		    p = getPrime();
+		    q = getPrime();
+		    if(!p.equals(q))
 			break;
 		}
-		rsadat.print(e+"\n"+d+"\n"+n+"\n");
-		rsadat.close();
-		
+		n = p.multiply(q);
+		totient = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
+		for(;;){
+		    e = (new BigDecimal(totient).multiply(new BigDecimal(Math.random()))).toBigInteger();
+		    if(gcd(e,totient).equals(BigInteger.ONE))
+			break;
+		}
+		d = getPrivateExponent(e,totient);
+		if(d.compareTo(BigInteger.ONE)>0)
+		    break;
 	    }
+	    rsadat.print(e+"\n"+d+"\n"+n+"\n");
+	    rsadat.close();
+	    
 	}
-	catch(Exception e){
-	    throw new RuntimeException(e);
-	}
+
 	publicKey = new Key(e,n);
 	privateKey = new Key(d,n);		
     }
@@ -90,7 +105,7 @@ public class RSA{
     }
 
     public Vector<String> encrypt(String toEncrypt, Key theirPublicKey){
-	Vector toReturn = new Vector<String>();
+	Vector<String> toReturn = new Vector<String>();
 	byte[] sbytes = toEncrypt.getBytes();
 	int additionalSlots=0;//0 or 1
 	if(sbytes.length%(n.bitLength()/8)!=0)
@@ -107,7 +122,7 @@ public class RSA{
 	    BigInteger n = theirPublicKey.getModulus();
 	    BigInteger ret = new BigInteger(1,bytes);
 	    BigInteger encrypted = ret.modPow(e,n);
-	    toReturn.add(encrypted+"");
+	    toReturn.add(encrypted.toString());
 	}
 	return toReturn;
     }
