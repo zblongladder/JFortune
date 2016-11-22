@@ -2,7 +2,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.InetAddress;
 import rsa.*;
-import java.util.Vector;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.io.*;
 import java.math.*;
@@ -35,7 +35,7 @@ public class JFortune{
 	    print("Public exponent sent\n");
 	    socketOut.println(myPubKey.getModulus());
 	    print("Public modulus sent\n");
-	    Vector<String> fortuneV = new Vector<String>();
+	    ArrayList<String> fortuneV = new ArrayList<String>();
 	    while(!socketIn.hasNext()){
 		print("waiting\n");
 	    }

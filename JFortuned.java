@@ -3,7 +3,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.HashSet;
 import rsa.*;
-import java.util.Vector;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.io.*;
 import java.math.*;
@@ -33,7 +33,7 @@ public class JFortuned{
      *occasionally), the client hangs,
      *but you can kill the client and resubmit without touching the server. 
      */
-    Vector<String> fortunes = new Vector<String>();
+    ArrayList<String> fortunes = new ArrayList<String>();
     static final String FORTUNEFILENAME = "fortunes.dat";
     public JFortuned(String[] ARGV){
 	String fFileName = null;
@@ -121,7 +121,7 @@ public class JFortuned{
 	for(;;){
 	    String fortune = fortunes.get((int)(Math.random()*fortunes.size()));
 	    if(!fortuneHistory.get(pubKey).contains(fortune)){		
-		Vector<String> fortuneV = new RSA().encrypt(fortune,pubKey);
+		ArrayList<String> fortuneV = new RSA().encrypt(fortune,pubKey);
 		out.println(fortuneV.size());
 		for(String fEncrypted: fortuneV)
 		    out.println(fEncrypted);

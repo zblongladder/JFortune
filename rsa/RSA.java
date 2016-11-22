@@ -4,11 +4,14 @@ import java.util.Random;
 import java.util.Scanner;
 import java.io.*;
 import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Arrays;
+import org.apache.commons.lang3.ArrayUtils;
 public class RSA{
     Key publicKey;
     Key privateKey;
-    BigInteger p,q,n,totient,e,d;
-    static final String KEYFILENAME = "rsakey.dat";
+    static final String DEFAULTKEYFILENAME = "rsakey.dat";
     static final int PRIMESIZE = 1024;
     public Key getPublicKey(){
 	return publicKey;
@@ -17,22 +20,25 @@ public class RSA{
 	return privateKey;
     }
     public RSA(){
-	File rsaFile = new File(KEYFILENAME);
-	//try{
+	this(DEFAULTKEYFILENAME);
+    }
+    public RSA(String keyfileName){
+	File rsaFile = new File(keyfileName);
 	boolean keyfileIsNew;
 	try{
 	    keyfileIsNew = rsaFile.createNewFile();
 	}
-	catch(IOException e){
-	    throw new RuntimeException("Error creating or accessing file "+KEYFILENAME+":"+e);
+	catch(IOException ex){
+	    throw new RuntimeException("Error creating or accessing file "+keyfileName+":"+ex);
 	}
+	BigInteger e,d,n;
 	if(!keyfileIsNew){//if the file already existed
 	    Scanner keyfile;
 	    try{
 		keyfile = new Scanner(rsaFile);
 	    }
-	    catch(FileNotFoundException e){
-		throw new RuntimeException("Could not find RSA keyfile "+KEYFILENAME+":"+e);
+	    catch(FileNotFoundException ex){
+		throw new RuntimeException("Could not find RSA keyfile "+keyfileName+":"+ex);
 	    }
 	    e = new BigInteger(keyfile.nextLine().trim());
 	    d = new BigInteger(keyfile.nextLine().trim());
@@ -43,9 +49,10 @@ public class RSA{
 	    try{
 		rsadat = new PrintWriter(rsaFile);
 	    }
-	    catch(FileNotFoundException e){
-		throw new RuntimeException("Could not find RSA keyfile "+KEYFILENAME+":"+e);
+	    catch(FileNotFoundException ex){
+		throw new RuntimeException("Could not find RSA keyfile "+keyfileName+":"+ex);
 	    }
+	    BigInteger p,q,totient;
 	    for(;;){
 		for(;;){
 		    p = getPrime();
@@ -80,13 +87,8 @@ public class RSA{
 	return BigInteger.probablePrime(PRIMESIZE,new Random());
     }
     BigInteger getPrivateExponent(BigInteger e, BigInteger totient){
-	
 	BigInteger[] exeuclids = ExtendedEuclids(e,totient);
-	
 	return exeuclids[0];
-	
-	
-	
     }
     BigInteger[] ExtendedEuclids(BigInteger a, BigInteger b){
 	//to solve x*a + y*b = gcd(a,b), or in this case,
@@ -104,54 +106,36 @@ public class RSA{
 	return gcd(b, a.mod(b));
     }
 
-    public Vector<String> encrypt(String toEncrypt, Key theirPublicKey){
-	Vector<String> toReturn = new Vector<String>();
-	byte[] sbytes = toEncrypt.getBytes();
+    public ArrayList<String> encrypt(String toEncrypt, Key theirPublicKey){
+	/* A simple implementation of RSA encryption. Does not implement
+	 * some features, notably padding, necessary for use in a
+	 * production environment.
+	 */
+	ArrayList<String> toReturn = new ArrayList<String>();
+	byte[] toEncryptBytes = toEncrypt.getBytes();
 	int additionalSlots=0;//0 or 1
-	if(sbytes.length%(n.bitLength()/8)!=0)
+	int blockbytes = theirPublicKey.getModulus().bitLength()/8;
+	if(toEncryptBytes.length%blockbytes!=0)
 	    additionalSlots=1;
-	byte[][] blocks = new byte[(sbytes.length/(n.bitLength()/8))+additionalSlots][n.bitLength()/8];
+	byte[][] blocks = new byte[(toEncryptBytes.length/blockbytes)+additionalSlots][blockbytes];
 	if(additionalSlots==1)
-	    blocks[blocks.length-1] = new byte[sbytes.length%(n.bitLength()/8)];
-	int sbytesCounter = 0;
+	    blocks[blocks.length-1] = new byte[toEncryptBytes.length%blockbytes];
 	for(int i=0; i<blocks.length; i++){
-	    System.arraycopy(sbytes,i*(blocks[0].length),blocks[i],0,blocks[i].length);
+	    System.arraycopy(toEncryptBytes,i*(blocks[0].length),blocks[i],0,blocks[i].length);
 	}    
-	for(byte[] bytes:blocks){
-	    BigInteger e = theirPublicKey.getExponent();
-	    BigInteger n = theirPublicKey.getModulus();
-	    BigInteger ret = new BigInteger(1,bytes);
-	    BigInteger encrypted = ret.modPow(e,n);
+	for(byte[] block:blocks){
+	    BigInteger ret = new BigInteger(1,block);
+	    BigInteger encrypted = ret.modPow(theirPublicKey.getExponent(), theirPublicKey.getModulus());
 	    toReturn.add(encrypted.toString());
 	}
 	return toReturn;
     }
-    public String decrypt(Vector<String> toDecrypt){
-	byte[] returnbytes = new byte[10];//prob. going to resize
-	int currentPos = 0;
-	String toReturn = "";
+    public String decrypt(ArrayList<String> toDecrypt){
+	ArrayList<Byte> bytes = new ArrayList<Byte>();
 	for(String s:toDecrypt){
-	    BigInteger r = new BigInteger(s).modPow(d,n);
-	    byte[] rbytes = r.toByteArray();
-	    while(rbytes.length+currentPos>returnbytes.length)
-		returnbytes = byteArrayResize(returnbytes);
-	    System.arraycopy(rbytes,0,returnbytes,currentPos,rbytes.length);
-	    currentPos += rbytes.length;
+	    BigInteger decryptedByteInt = new BigInteger(s).modPow(privateKey.getExponent(),privateKey.getModulus());
+	    bytes.addAll(Arrays.asList(ArrayUtils.toObject(decryptedByteInt.toByteArray())));
 	}
-	returnbytes = byteArrayFitToSize(returnbytes,currentPos);
-	return new String(returnbytes);
+	return new String(ArrayUtils.toPrimitive(bytes.toArray(new Byte[bytes.size()])));
     }
-    byte[] byteArrayResize(byte[] bytes){
-	byte[] toReturn = new byte[2*bytes.length];
-	System.arraycopy(bytes,0,toReturn,0,bytes.length);
-	return toReturn;
-    }
-    byte[] byteArrayFitToSize(byte[] bytes, int size){
-	if(!(size<bytes.length))
-	    return bytes;
-	byte[] toReturn = new byte[size];
-	System.arraycopy(bytes,0,toReturn,0,toReturn.length);
-	return toReturn;
-    }
-	
 }
