@@ -9,6 +9,13 @@ import java.util.List;
 import java.util.Arrays;
 import org.apache.commons.lang3.ArrayUtils;
 public class RSA{
+
+    /* This is a fairly simple implementation of textbook RSA 
+     * encryption/decryption. It doesn't use padding, and it doesn't
+     * use a particularly secure method of generating primes, so it's
+     * not for use in actual security.
+     */
+    
     Key publicKey;
     Key privateKey;
     static final String DEFAULTKEYFILENAME = "rsakey.dat";
@@ -23,6 +30,9 @@ public class RSA{
 	this(DEFAULTKEYFILENAME);
     }
     public RSA(String keyfileName){
+	/* Constructor checks if keyfile exists and generates a new one if
+	 * it doesn't.
+	 */
 	File rsaFile = new File(keyfileName);
 	boolean keyfileIsNew;
 	try{
@@ -31,7 +41,10 @@ public class RSA{
 	catch(IOException ex){
 	    throw new RuntimeException("Error creating or accessing file "+keyfileName+":"+ex);
 	}
-	BigInteger e,d,n;
+	BigInteger e,d,n; /*the public exponent, private exponent, and modulus, 
+			    respectively. The nomenclature e,d, and n is 
+			    standard for RSA.
+			   */
 	if(!keyfileIsNew){//if the file already existed
 	    Scanner keyfile;
 	    try{
@@ -44,7 +57,7 @@ public class RSA{
 	    d = new BigInteger(keyfile.nextLine().trim());
 	    n = new BigInteger(keyfile.nextLine().trim());
 	}
-	else{//generate a new key for the instance of RSA
+	else{//generate a new key
 	    PrintWriter rsadat;
 	    try{
 		rsadat = new PrintWriter(rsaFile);
@@ -52,7 +65,11 @@ public class RSA{
 	    catch(FileNotFoundException ex){
 		throw new RuntimeException("Could not find RSA keyfile "+keyfileName+":"+ex);
 	    }
-	    BigInteger p,q,totient;
+	    BigInteger p,q,totient; /* p & q are two random nonequal primes and
+				     * totient is the Euler totient function
+				     * of the two. Variable names are pretty
+				     * standard for RSA.
+				     */
 	    for(;;){
 		for(;;){
 		    p = getPrime();
@@ -73,7 +90,6 @@ public class RSA{
 	    }
 	    rsadat.print(e+"\n"+d+"\n"+n+"\n");
 	    rsadat.close();
-	    
 	}
 
 	publicKey = new Key(e,n);
@@ -113,7 +129,11 @@ public class RSA{
 	 */
 	ArrayList<String> toReturn = new ArrayList<String>();
 	byte[] toEncryptBytes = toEncrypt.getBytes();
-	int additionalSlots=0;//0 or 1
+	int additionalSlots=0;/* 0 or 1. 0 if message fits evenly into a whole
+			       * number of blocks the size of the key's modulus,
+			       * 1 if it doesn't an an extra partial-size block
+			       * is needed.
+			       */
 	int blockbytes = theirPublicKey.getModulus().bitLength()/8;
 	if(toEncryptBytes.length%blockbytes!=0)
 	    additionalSlots=1;
